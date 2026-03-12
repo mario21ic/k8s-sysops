@@ -1,0 +1,78 @@
+# ============================================================
+# TEMA 6b: Rollback — despliegue roto intencional
+# ============================================================
+# Concepto:
+#   Simula un despliegue fallido (imagen inexistente).
+#   Como maxUnavailable: 0, los Pods v3 siguen corriendo.
+#   El rolling update se bloquea y se puede revertir.
+#
+# Comportamiento esperado:
+#   - Los nuevos Pods quedan en ErrImagePull / ImagePullBackOff
+#   - Los Pods v3 NO se terminan (maxUnavailable: 0 los protege)
+#   - El Deployment queda en progreso bloqueado
+#
+# Comandos del flujo completo de Rollback:
+#
+#   # 1. Aplicar el despliegue roto
+#   kubectl apply -f 06b-deployment-v4.0-broken.yaml
+#
+#   # 2. Observar el estado
+#   kubectl rollout status deployment/api-healthchecker
+#   kubectl get pods
+#     → Pods v3 siguen Running, Pods v4 en ImagePullBackOff
+#
+#   # 3. Ver historial
+#   kubectl rollout history deployment/api-healthchecker
+#
+#   # 4. Rollback a la revisión anterior (v3.0)
+#   kubectl rollout undo deployment/api-healthchecker
+#
+#   # 5. O rollback a una revisión específica
+#   kubectl rollout undo deployment/api-healthchecker --to-revision=2
+#
+#   # 6. Confirmar que todo volvió a v3
+#   kubectl rollout status deployment/api-healthchecker
+#   kubectl get pods
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+  annotations:
+    kubernetes.io/change-cause: "v4.0: BROKEN - imagen inexistente (demo rollback)"
+spec:
+  replicas: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # los Pods v3 no se tocan hasta que v4 esté Ready
+
+  selector:
+    matchLabels:
+      app: api-healthchecker
+
+  template:
+    metadata:
+      labels:
+        app: api-healthchecker
+        version: "4.0-broken"
+    spec:
+      containers:
+
+        - name: api
+          image: mario21ic/api-healthchecker:4.0-esta-imagen-no-existe   # ← falla intencional
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5001
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3

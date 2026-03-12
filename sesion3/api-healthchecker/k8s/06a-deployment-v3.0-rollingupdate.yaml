@@ -1,0 +1,106 @@
+# ============================================================
+# TEMA 6a: Rolling Update → v3.0
+# ============================================================
+# Concepto:
+#   RollingUpdate actualiza los Pods de forma gradual.
+#   maxSurge:       cuántos Pods EXTRA se pueden crear durante el update.
+#   maxUnavailable: cuántos Pods pueden estar NO disponibles durante el update.
+#
+#   Con maxUnavailable: 0 → nunca baja de 3 Pods disponibles.
+#   Con maxSurge: 1       → como máximo 4 Pods existen a la vez.
+#
+# Flujo observado:
+#   1 Pod nuevo (v3) arranca → pasa readiness → 1 Pod viejo (v2) termina
+#   Se repite hasta que todos los Pods son v3.
+#
+# Novedad en v3.0: agrega endpoint /info
+#
+# Imagen a construir:
+#   cp versions/main_v3.0.py app/main.py
+#   docker build -t api-healthchecker:3.0 .
+#
+# Comandos útiles:
+#   kubectl apply -f 06a-deployment-v3.0-rollingupdate.yaml
+#   kubectl rollout status deployment/api-healthchecker
+#   kubectl get pods -w                        # ver sustitución gradual
+#   kubectl rollout history deployment/api-healthchecker
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+  annotations:
+    kubernetes.io/change-cause: "v3.0: agrega endpoint /info"
+spec:
+  replicas: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # permite 1 Pod extra durante el update
+      maxUnavailable: 0  # nunca reduce por debajo de 3 Pods disponibles
+
+  selector:
+    matchLabels:
+      app: api-healthchecker
+
+  template:
+    metadata:
+      labels:
+        app: api-healthchecker
+        version: "3.0"
+    spec:
+
+      initContainers:
+
+        - name: init-check-network
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-check-network] Verificando DNS interno ==="
+              nslookup kubernetes.default && echo "DNS OK" || exit 1
+
+        - name: init-write-config
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-write-config] Generando configuración ==="
+              echo "Config generada OK"
+
+      containers:
+
+        - name: api
+          image: mario21ic/api-healthchecker:3.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+
+        - name: sidecar-logger
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "[$(date)] health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+                sleep 15
+              done

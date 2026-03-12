@@ -1,0 +1,108 @@
+# ============================================================
+# TEMA 5: Liveness & Readiness Probes
+# ============================================================
+# Concepto:
+#   readinessProbe → ¿puede el Pod recibir tráfico?
+#                    Falla: Pod se saca del pool (READY 0/1)
+#   livenessProbe  → ¿sigue vivo el contenedor?
+#                    Falla: Kubernetes reinicia el contenedor
+#
+# Comportamiento de api-healthchecker:2.0:
+#   /ready  → 503 durante los primeros 15 s (warmup)
+#             200 después del warmup
+#   /health → 200 durante los primeros 90 s
+#             500 a partir del segundo 90 (fallo simulado)
+#             → liveness lo detecta → reinicio automático
+#
+# Imagen a construir:
+#   cp versions/main_v2.0.py app/main.py
+#   docker build -t api-healthchecker:2.0 .
+#
+# Comandos útiles:
+#   kubectl apply -f 05-deployment-v2.0-probes.yaml
+#   kubectl get pods -w
+#     → Los primeros ~15s: READY 0/1  (readiness falla)
+#     → Pasado el warmup: READY 1/1
+#     → A los ~90s:       RESTARTS sube (liveness reinicia)
+#   kubectl describe pod <nombre> | grep -A 15 Events
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+  annotations:
+    kubernetes.io/change-cause: "v2.0: agrega liveness y readiness probes"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-healthchecker
+  template:
+    metadata:
+      labels:
+        app: api-healthchecker
+        version: "2.0"
+    spec:
+
+      initContainers:
+
+        - name: init-check-network
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-check-network] Verificando DNS interno ==="
+              nslookup kubernetes.default && echo "DNS OK" || exit 1
+
+        - name: init-write-config
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-write-config] Generando configuración ==="
+              echo "Config generada OK"
+
+      containers:
+
+        - name: api
+          image: mario21ic/api-healthchecker:2.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+
+          # ── Readiness Probe ──────────────────────────────────────
+          # Espera 10s antes del primer chequeo.
+          # Si /ready devuelve 503 → Pod fuera del pool (no recibe tráfico).
+          # Se reintenta cada 5s; 3 fallos consecutivos = Not Ready.
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+
+          # ── Liveness Probe ───────────────────────────────────────
+          # Espera 20s antes del primer chequeo (deja pasar el warmup).
+          # Si /health devuelve 500 → reinicio del contenedor.
+          # Se reintenta cada 10s; 3 fallos consecutivos = reinicio.
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+
+        - name: sidecar-logger
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "[$(date)] health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+                echo "[$(date)] ready → $(wget -qO- http://localhost:5001/ready 2>/dev/null)"
+                sleep 10
+              done

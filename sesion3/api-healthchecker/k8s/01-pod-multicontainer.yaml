@@ -1,0 +1,44 @@
+# ============================================================
+# TEMA 1: Pod Multi-containers
+# ============================================================
+# Concepto: Dos contenedores comparten red (localhost) y
+#           ciclo de vida dentro del mismo Pod.
+#
+# Contenedores:
+#   - api:            Flask app (imagen propia)
+#   - sidecar-logger: busybox que consulta la API por localhost
+#
+# Imagen a construir:
+#   docker build -t api-healthchecker:1.0 .
+#   (copiar versions/main_v1.0.py → app/main.py antes de build)
+#
+# Comandos útiles:
+#   kubectl apply -f 01-pod-multicontainer.yaml
+#   kubectl logs api-healthchecker -c api
+#   kubectl logs api-healthchecker -c sidecar-logger
+#   kubectl exec -it api-healthchecker -c api -- wget -qO- localhost:5001/health
+# ============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+spec:
+  containers:
+
+    - name: api
+      image: mario21ic/api-healthchecker:1.0
+      imagePullPolicy: Never          # imagen local (minikube / kind)
+      ports:
+        - containerPort: 5001
+
+    - name: sidecar-logger
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          while true; do
+            echo "[$(date)] /health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+            sleep 10
+          done

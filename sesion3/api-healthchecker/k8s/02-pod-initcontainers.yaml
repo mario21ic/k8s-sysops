@@ -1,0 +1,74 @@
+# ============================================================
+# TEMA 2: Pod Init Containers
+# ============================================================
+# Concepto: Los init containers corren y terminan ANTES de que
+#           arranquen los containers principales.
+#           Si alguno falla, el Pod no avanza.
+#
+# Init containers (en orden):
+#   1. init-check-network : verifica resolución DNS interna
+#   2. init-write-config  : simula generación de config
+#
+# Containers principales (igual que tema 1):
+#   - api
+#   - sidecar-logger
+#
+# Imagen: api-healthchecker:1.0  (misma que tema 1)
+#
+# Comandos útiles:
+#   kubectl apply -f 02-pod-initcontainers.yaml
+#   kubectl get pod api-healthchecker -w
+#     → STATUS: Init:0/2 → Init:1/2 → PodInitializing → Running
+#   kubectl logs api-healthchecker -c init-check-network
+#   kubectl logs api-healthchecker -c init-write-config
+# ============================================================
+apiVersion: v1
+kind: Pod
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+spec:
+
+  initContainers:
+
+    - name: init-check-network
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "=== [init-check-network] Verificando DNS interno ==="
+          for i in $(seq 1 5); do
+            nslookup kubernetes.default && echo "DNS OK" && exit 0
+            echo "Intento $i falló, reintentando en 3s..."
+            sleep 3
+          done
+          echo "ERROR: no se pudo resolver kubernetes.default" && exit 1
+
+    - name: init-write-config
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "=== [init-write-config] Generando configuración ==="
+          echo "APP_ENV=production"
+          echo "MAX_RETRIES=3"
+          echo "Config generada OK"
+
+  containers:
+
+    - name: api
+      image: mario21ic/api-healthchecker:1.0
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 5001
+
+    - name: sidecar-logger
+      image: busybox
+      command: ["sh", "-c"]
+      args:
+        - |
+          while true; do
+            echo "[$(date)] /health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+            sleep 10
+          done

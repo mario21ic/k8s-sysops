@@ -1,0 +1,78 @@
+# ============================================================
+# TEMA 4: Deployment
+# ============================================================
+# Concepto: Envuelve al ReplicaSet y agrega:
+#   - Historial de revisiones (rollout history)
+#   - Estrategia de actualización configurable
+#   - Comandos rollout (pause, resume, undo)
+#
+# Diferencia clave vs ReplicaSet:
+#   El Deployment gestiona el RS automáticamente.
+#   Cada cambio en el template crea un nuevo RS y migra los Pods.
+#
+# Imagen: api-healthchecker:1.0
+#
+# Comandos útiles:
+#   kubectl apply -f 04-deployment.yaml
+#   kubectl get deployment api-healthchecker
+#   kubectl get rs                          # RS creado por el Deployment
+#   kubectl get pods
+#   kubectl rollout status deployment/api-healthchecker
+#   kubectl rollout history deployment/api-healthchecker
+#   kubectl describe deployment api-healthchecker
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-healthchecker
+  labels:
+    app: api-healthchecker
+  annotations:
+    kubernetes.io/change-cause: "v1.0: versión inicial"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-healthchecker
+  template:
+    metadata:
+      labels:
+        app: api-healthchecker
+        version: "1.0"
+    spec:
+
+      initContainers:
+
+        - name: init-check-network
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-check-network] Verificando DNS interno ==="
+              nslookup kubernetes.default && echo "DNS OK" || exit 1
+
+        - name: init-write-config
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-write-config] Generando configuración ==="
+              echo "Config generada OK"
+
+      containers:
+
+        - name: api
+          image: mario21ic/api-healthchecker:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+
+        - name: sidecar-logger
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "[$(date)] /health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+                sleep 15
+              done

@@ -1,0 +1,76 @@
+# ============================================================
+# TEMA 3: ReplicaSet
+# ============================================================
+# Concepto: Garantiza que N réplicas del Pod estén corriendo.
+#           Si un Pod muere, el RS crea uno nuevo automáticamente.
+#
+# Imagen: api-healthchecker:1.0
+#
+# Comandos útiles:
+#   kubectl apply -f 03-replicaset.yaml
+#   kubectl get pods -l app=api-healthchecker
+#
+#   # Demostrar auto-recuperación:
+#   kubectl delete pod <nombre-de-un-pod>
+#   kubectl get pods -w          # aparece uno nuevo automáticamente
+#
+#   # Escalar manualmente:
+#   kubectl scale rs api-healthchecker-rs --replicas=5
+#   kubectl scale rs api-healthchecker-rs --replicas=2
+#
+#   # Ver el RS:
+#   kubectl describe rs api-healthchecker-rs
+# ============================================================
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: api-healthchecker-rs
+  labels:
+    app: api-healthchecker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: api-healthchecker
+  template:
+    metadata:
+      labels:
+        app: api-healthchecker
+        version: "1.0"
+    spec:
+
+      initContainers:
+
+        - name: init-check-network
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-check-network] Verificando DNS interno ==="
+              nslookup kubernetes.default && echo "DNS OK" || exit 1
+
+        - name: init-write-config
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "=== [init-write-config] Generando configuración ==="
+              echo "Config generada OK"
+
+      containers:
+
+        - name: api
+          image: mario21ic/api-healthchecker:1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5001
+
+        - name: sidecar-logger
+          image: busybox
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                echo "[$(date)] /health → $(wget -qO- http://localhost:5001/health 2>/dev/null)"
+                sleep 15
+              done
