@@ -1,0 +1,21 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-init
+  labels:
+    app: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    ports:
+      - containerPort: 80
+        name: http
+        protocol: TCP
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+  #- name: init-mydb
+  #  image: busybox:1.28
+  #  command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']

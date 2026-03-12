@@ -1,11 +1,19 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: nginx-readiness
+  name: nginx-liveness
 spec:
   containers:
   - name: nginx
     image: nginx:alpine
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 5
+      timeoutSeconds: 1
+      periodSeconds: 10
+      failureThreshold: 3
     readinessProbe:
       httpGet:
         path: /
@@ -14,3 +22,7 @@ spec:
       initialDelaySeconds: 0
       failureThreshold: 3
       successThreshold: 1
+    ports:
+      - containerPort: 80
+        name: http
+        protocol: TCP
