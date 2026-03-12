@@ -1,0 +1,16 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-readiness
+spec:
+  containers:
+  - name: nginx
+    image: nginx:alpine
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      periodSeconds: 2
+      initialDelaySeconds: 0
+      failureThreshold: 3
+      successThreshold: 1
