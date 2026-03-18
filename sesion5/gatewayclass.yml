@@ -1,0 +1,9 @@
+# YA NO SE NECESITA
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: nginx-gateway
+  #name: traefik-gateway
+spec:
+  controllerName: gateway.nginx.org/nginx-gateway-controller
+  #controllerName: traefik.io/gateway-controller
