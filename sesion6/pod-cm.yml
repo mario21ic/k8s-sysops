@@ -1,0 +1,17 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-cm
+spec:
+  containers:
+  - name: web
+    image: nginx:alpine
+    env:
+      - name: MiEnv
+        value: "MiValue"
+      - name: foo
+        valueFrom:
+          configMapKeyRef:
+            name: nginx-cm
+            key: foo
+
