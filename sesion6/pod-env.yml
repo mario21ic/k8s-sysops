@@ -1,0 +1,11 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-env
+spec:
+  containers:
+  - name: web
+    image: nginx:alpine
+    env:
+      - name: MiEnv
+        value: "MiValue"

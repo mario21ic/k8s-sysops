@@ -1,11 +1,11 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: pod-secret-all
+  name: pod-cm-all
 spec:
   containers:
-  - name: nginx
+  - name: web
     image: nginx:alpine
     envFrom:
-    - secretRef:
-        name: my-secret
+    - configMapRef:
+        name: nginx-cm

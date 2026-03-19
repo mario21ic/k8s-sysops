@@ -1,0 +1,8 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: nginx-cm
+  namespace: my-namespace
+data:
+  MY_KEY: "MY_VALUE"
+

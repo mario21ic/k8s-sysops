@@ -1,0 +1,17 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-cm-files
+spec:
+  volumes:
+    - name: config-volume          # Nombre del volumen
+      configMap:
+        name: nginx-cm             # Referencia al ConfigMap
+  containers:
+  - name: web
+    image: nginx:alpine
+    volumeMounts:
+      - name: config-volume        # Mismo nombre del volumen
+        mountPath: /etc/config     # Directorio donde se montan
+
+# Revisar en /etc/config/
