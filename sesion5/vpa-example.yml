@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vpa-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-demo
+  template:
+    metadata:
+      labels:
+        app: vpa-demo
+    spec:
+      containers:
+      - name: app
+        image: polinux/stress
+        resources:
+          requests:
+            cpu: 100m        # ← intencionalmente bajo
+            #memory: 50Mi # ratio x4
+            memory: 100Mi # ratio x2
+          limits:
+            cpu: 200m
+            memory: 200Mi
+        command: ["stress"]
+        args: ["--vm", "1", "--vm-bytes", "190M", "--vm-hang", "1"] # Fase 1: estable
+        #args: ["--vm", "1", "--vm-bytes", "200M", "--vm-hang", "1"] # Fase 2: OOMKilled
+        #args: ["-cpus", "3"]               # ← fuerza consumo de CPU
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: vpa-demo
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vpa-demo
+  updatePolicy:
+    updateMode: "Off"         # fase 1: solo recomienda, nunca aplica — útil para auditoría 
+    #updateMode: "Recreate"    # fase 2: solo recrea, no evicta activamente
+    #updateMode: "Auto"        # evicta y recrea pods con nuevos recursos
+    #updateMode: "Initial"     # solo aplica al crear pods nuevos, no toca los existentes
+  resourcePolicy:
+    containerPolicies:
+    - containerName: app     # nombre exacto del contenedor en el Deployment, * aplicaria a todos
+      # VPA nunca recomendará por debajo de estos valores aunque el pod consuma menos. Protege contra sub-asignación que cause latencia.
+      minAllowed:
+        cpu: 100m            # límite inferior
+        #memory: 50Mi
+        memory: 100Mi
+      # VPA nunca recomendará por encima de estos valores en el `Target` (request). Evita que un pod acapare recursos del nodo.
+      maxAllowed:
+        cpu: 2000m           # límite superior
+        memory: 200Mi
+      # Para mayor control del ratio
+      #controlledResources: ["cpu", "memory"]   # default implícito
+      controlledResources: ["memory"]
+      #controlledValues: RequestsOnly      # Solo ajusta requests por radio, limits quedan como en el Deployment
+      #controlledValues: RequestsAndLimits # Ajusta requests y recalcula limits por ratio

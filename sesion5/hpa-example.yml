@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpa-demo
+spec:
+  replicas: 1                    # HPA tomará control de esto
+  selector:
+    matchLabels:
+      app: hpa-demo
+  template:
+    metadata:
+      labels:
+        app: hpa-demo
+    spec:
+      containers:
+      - name: app
+        image: polinux/stress
+        resources:
+          requests:
+            cpu: 200m            # HPA usa esto como base para calcular %
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 200Mi
+        command: ["stress"]
+        args: ["--cpu", "1"]     # fuerza consumo de CPU continuo
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpa-demo
+spec:
+
+  # --- a quién apunta ---
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpa-demo
+
+  # --- rango de réplicas ---
+  minReplicas: 1                 # nunca bajará de 1 pod
+  maxReplicas: 5                 # nunca superará 5 pods
+
+  # --- métricas que disparan el escalado ---
+  metrics:
+
+  # Métrica 1: CPU por utilización
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50   # escala si CPU promedio supera 50% del request
+
+  # Métrica 2: Memory por valor absoluto
+  #- type: Resource
+  #  resource:
+  #    name: memory
+  #    target:
+  #      type: AverageValue
+  #      averageValue: 150Mi      # escala si memoria promedio supera 150Mi
+
+  # --- comportamiento de escalado ---
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30   # espera 30s antes de escalar arriba
+      policies:
+      - type: Pods
+        value: 2                        # agrega máximo 2 pods por vez
+        periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 60   # espera 60s antes de escalar abajo
+      policies:
+      - type: Pods
+        value: 1                        # elimina máximo 1 pod por vez
+        periodSeconds: 60

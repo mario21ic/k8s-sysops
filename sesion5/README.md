@@ -92,3 +92,41 @@ kubectl apply -f pod-limits-memory.yml
 kubectl top pod-limits-memory
 
 # Nota: validar si es exacto, poco, demasiado, etc.
+
+
+# Vertical Pod Autoscaling
+
+1. Instalar VPA
+```
+git clone https://github.com/kubernetes/autoscaler.git
+cd autoscaler/vertical-pod-autoscaler
+./hack/vpa-up.sh
+```
+
+2. Verificar que los 3 componentes VPA estén corriendo
+kubectl get pods -n kube-system | grep vpa
+kubectl logs -n kube-system deploy/vpa-recommender --tail=30
+
+3. Verificar que Metrics Server está dando datos al VPA
+kubectl get --raw /apis/metrics.k8s.io/v1beta1/namespaces/default/pods | python3 -m json.tool | grep -A5 vpa-demo
+
+4. Aplicar ejemplo y Verificar el consuom del pod
+kubectl apply -f vpa-example.yml
+sleep 5
+kubectl top pod -l app=vpa-demo
+
+5. Ver recomendacion
+sleep 120
+kubectl describe vpa vpa-demo | grep -A20 "Recommendation"
+
+6. Validar limits
+kubectl get pod -l app=vpa-demo -o jsonpath='{.items[0].spec.containers[0].resources}' | jq .
+
+
+# Horizontal Pod Autoscaling
+1. Crear deploy & hpa, y validar:
+kubectl apply -f hpa-example.yml
+kubectl get hpa,pods
+
+2. Monitorear en tiempo real
+watch -n 5 'kubectl get hpa hpa-demo && kubectl top pod -l app=hpa-demo && kubectl get pods -l app=hpa-demo'
