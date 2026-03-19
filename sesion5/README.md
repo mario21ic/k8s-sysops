@@ -23,6 +23,7 @@ kubectl get svc -n nginx-gateway
 
 
 # Instalar gateway y routes
+#kubectl apply -f gatewayclass.yml # ya no es necesario
 kubectl apply -f gateway.yml
 kubectl apply -f gateway-routes.yml
 

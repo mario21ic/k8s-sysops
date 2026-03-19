@@ -6,14 +6,17 @@ spec:
   containers:
   - name: pod-cpu-demo-ctr
     image: vish/stress
-    resources:
-      limits:
-        #cpu: "0.5"
-        #cpu: "1"
-        cpu: "2"
-      requests:
-        cpu: "0.5"
     args:
     - -cpus
-    - "1"
-    #- "2"
+    #- "1"
+    - "2"
+    resources:
+      limits:   # maximo
+        #cpu: "0.5"
+        cpu: "1"
+        #cpu: "2"
+        #cpu: "3"
+      requests: # minimo
+        #cpu: "0.5"
+        cpu: "1"
+        #cpu: "3"
