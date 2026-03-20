@@ -6,9 +6,12 @@ metadata:
     type: local
 spec:
   storageClassName: manual
+  #storageClassName: microk8s-hostpath
   capacity:
     storage: 100Mi
   accessModes:
-    - ReadWriteOnce
+    #- ReadWriteOnce # solo por un node
+    - ReadWriteMany  # varios nodos a la vez
+    #- ReadWriteOncePod # un Pod a la vez
   hostPath:
     path: "/tmp/datapv"

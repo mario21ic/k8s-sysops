@@ -20,12 +20,13 @@ spec:
             cpu: 100m        # ← intencionalmente bajo
             #memory: 50Mi # ratio x4
             memory: 100Mi # ratio x2
+            #memory: 200Mi # ratio x1
           limits:
             cpu: 200m
             memory: 200Mi
         command: ["stress"]
-        args: ["--vm", "1", "--vm-bytes", "190M", "--vm-hang", "1"] # Fase 1: estable
-        #args: ["--vm", "1", "--vm-bytes", "200M", "--vm-hang", "1"] # Fase 2: OOMKilled
+        #args: ["--vm", "1", "--vm-bytes", "190M", "--vm-hang", "1"] # Fase 1: estable
+        args: ["--vm", "1", "--vm-bytes", "200M", "--vm-hang", "1"] # Fase 2: OOMKilled
         #args: ["-cpus", "3"]               # ← fuerza consumo de CPU
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -38,8 +39,8 @@ spec:
     kind: Deployment
     name: vpa-demo
   updatePolicy:
-    updateMode: "Off"         # fase 1: solo recomienda, nunca aplica — útil para auditoría 
-    #updateMode: "Recreate"    # fase 2: solo recrea, no evicta activamente
+    #updateMode: "Off"         # Fase 1: solo recomienda, nunca aplica — útil para auditoría 
+    updateMode: "Recreate"    # Fase 2: solo recrea, no evicta activamente
     #updateMode: "Auto"        # evicta y recrea pods con nuevos recursos
     #updateMode: "Initial"     # solo aplica al crear pods nuevos, no toca los existentes
   resourcePolicy:

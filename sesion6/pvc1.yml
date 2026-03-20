@@ -4,8 +4,10 @@ metadata:
   name: myclaim
 spec:
   storageClassName: manual
+  #storageClassName: microk8s-hostpath
   accessModes:
-    - ReadWriteOnce
+    #- ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 8Mi

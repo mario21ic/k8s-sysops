@@ -20,7 +20,8 @@ spec:
             cpu: 200m            # HPA usa esto como base para calcular %
             memory: 100Mi
           limits:
-            cpu: 500m
+            #cpu: 500m
+            cpu: 2.5
             memory: 200Mi
         command: ["stress"]
         args: ["--cpu", "1"]     # fuerza consumo de CPU continuo
@@ -50,7 +51,8 @@ spec:
       name: cpu
       target:
         type: Utilization
-        averageUtilization: 50   # escala si CPU promedio supera 50% del request
+        #averageUtilization: 50   # escala si CPU promedio supera 50% del request
+        averageUtilization: 90
 
   # Métrica 2: Memory por valor absoluto
   #- type: Resource

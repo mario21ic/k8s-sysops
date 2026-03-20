@@ -1,0 +1,16 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: pod-pv-pvc2
+spec:
+  volumes:
+    - name: mi-volume
+      persistentVolumeClaim:
+        claimName: myclaim
+  containers:
+    - image: alpine
+      name: alpine
+      command: ["sleep", "3600"]
+      volumeMounts:
+      - mountPath: /data
+        name: mi-volume

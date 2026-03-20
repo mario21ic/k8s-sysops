@@ -130,3 +130,6 @@ kubectl get hpa,pods
 
 2. Monitorear en tiempo real
 watch -n 5 'kubectl get hpa hpa-demo && kubectl top pod -l app=hpa-demo && kubectl get pods -l app=hpa-demo'
+
+
+
