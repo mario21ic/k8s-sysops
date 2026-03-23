@@ -1,0 +1,9 @@
+kind: Pod 
+apiVersion: v1 
+metadata:
+  name: pod-illegal
+  namespace: mynamespace
+spec:
+  containers:
+    - name: nginx-illegal 
+      image: nginx:alpine

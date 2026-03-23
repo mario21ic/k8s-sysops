@@ -16,5 +16,6 @@ spec:
         effect: NoSchedule
       containers:
       - name: nginx
-        image: nginx:alpine
+        #image: nginx:alpine
+        image: mario21ic/nginx:alpine
       terminationGracePeriodSeconds: 30
