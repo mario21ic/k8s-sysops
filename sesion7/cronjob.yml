@@ -1,9 +1,9 @@
 kind: CronJob
 apiVersion: batch/v1
 metadata:
-  name: countdown
+  name: countdown-cronjob
 spec:
-  schedule: "21 20 * * *"
+  schedule: "55 20 * * *"
   jobTemplate:
     spec:
       template:

@@ -1,8 +1,10 @@
 kind: Job
 apiVersion: batch/v1
 metadata:
-  name: countdown-job
+  name: countdown-job-parallel
 spec:
+  parallelism: 2 # Run up to 2 pods concurrently
+  completions: 5 # Total of 5 successful completions needed
   template:
     metadata:
       name: countdown
@@ -14,4 +16,4 @@ spec:
          - "bin/sh"
          - "-c"
          - "for i in 9 8 7 6 5 4 3 2 1 ; do echo $i ; done"
-      restartPolicy: Never
+      restartPolicy: OnFailure
