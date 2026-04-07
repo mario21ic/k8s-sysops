@@ -46,7 +46,7 @@ fi
 
 # Configuración de llaves para ingresar a worker
 dnf install -y sshpass
-ssh-keygen -t ed25519 -C "miguel@k8s" -f ~/.ssh/id_ed25519 -q -N ""
+ssh-keygen -t ed25519 -C "mario21ic@k8s" -f ~/.ssh/id_ed25519 -q -N ""
 
 if [ "$NODE_TYPE" == "m" ]; then
   sshpass -p ${PASSWORD} ssh-copy-id -i ~/.ssh/id_ed25519.pub -o StrictHostKeyChecking=no root@${WORKER_IP}
